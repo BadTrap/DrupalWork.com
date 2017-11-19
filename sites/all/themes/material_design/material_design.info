@@ -1,0 +1,4 @@
+name = Bootstrap Material Custom Theme
+description = Sub-theme for Bootstrap (Material design)
+core = 7.x
+base theme = bootstrap

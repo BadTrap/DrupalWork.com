@@ -1,0 +1,23 @@
+<?php
+function rss_feeds_uninstall()
+{
+    cache_clear_all('rss_feeds', 'cache', TRUE);
+    drupal_uninstall_schema('rssfeeds');
+    menu_rebuild();
+}
+
+function rss_feeds_schema()
+{
+    $schema['rssfeeds'] = array(
+        'fields'      => array(
+            'id'         => array('type' => 'serial',  'size'=>'normal',  'not null' => TRUE),
+            'name'       => array('type' => 'varchar', 'length' => 255, 'not null' => TRUE),
+            'url'        => array('type' => 'varchar', 'length' => 255, 'not null' => TRUE),
+            'created_at' => array('type' => 'int', 'not null' => TRUE),
+            'updated_at' => array('type' => 'int', 'not null' => TRUE),
+        ),
+        'primary key' => array('id')
+    );
+
+    return $schema;
+}

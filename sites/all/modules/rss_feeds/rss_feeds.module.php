@@ -1,0 +1,281 @@
+<?php
+
+function rss_feeds_block_info()
+{
+    $blocks['rss_feeds'] = array(
+        'info'  => t('RSS Feeds'),
+        'cache' => DRUPAL_CACHE_PER_ROLE, // по умолчанию
+    );
+
+    return $blocks;
+}
+
+function rss_feeds_menu()
+{
+
+    $items = array();
+
+    $items['admin/config/content/rss_feeds'] = array(
+        'title'            => 'RSS Feeds',
+        'description'      => 'Configure the RSS feeds list.',
+        'page callback'    => 'rss_list',
+        'access arguments' => array('administer site configuration'),
+    );
+    $items['admin/config/content/rss_feeds/list'] = array(
+        'title'  => 'RSS feeds list',
+        'type'   => MENU_DEFAULT_LOCAL_TASK,
+        'weight' => 1,
+    );
+
+    // rss add form
+    $items['admin/config/content/rss_feeds/add'] = array(
+        'title'            => 'Add rss',
+        'page callback'    => 'drupal_get_form',
+        'page arguments'   => array('rss_feeds_form'),
+        'access arguments' => array('administer site configuration'),
+        'type'             => MENU_LOCAL_TASK,
+        'weight'           => 2,
+    );
+
+    // rss edit form
+    $items['admin/config/content/rss_feeds/%rss/edit'] = array(
+        'title'            => 'Edit RSS',
+        'page callback'    => 'drupal_get_form',
+        'page arguments'   => array('rss_feeds_form', 4),
+        'access arguments' => array('administer site configuration'),
+        'type'             => MENU_CALLBACK,
+    );
+
+    // rss delete
+    $items['admin/config/content/rss_feeds/%rss/delete'] = array(
+        'title'            => 'Delete RSS',
+        'page callback'    => 'rss_feeds_delete',
+        'page arguments'   => array(4),
+        'access arguments' => array('administer site configuration'),
+        'type'             => MENU_CALLBACK,
+    );
+
+    $items['rss_feeds'] = array(
+        'title'            => 'RSS feeds',
+        'page callback'    => '_rss_feeds_page',
+        'access arguments' => array('access content'),
+    );
+
+    $items['rss_feeds/%rss/items'] = array(
+        'title'            => 'RSS feed content',
+        'page callback'    => 'rss_content',
+        'page arguments'   => array(1),
+        'access callback'  => TRUE,
+        'access arguments' => array('access content'),
+        'type'             => MENU_CALLBACK,
+    );
+
+
+    return $items;
+}
+function rss_feeds_form($form, &$form_state, $rss = null)
+{
+    $form['name'] = array(
+        '#title'         => t('RSS feed name.'),
+        '#description'   => t('Insert RSS shortcut name'),
+        '#type'          => 'textfield',
+        '#default_value' => $rss ? $rss['name'] : '',
+        '#required'      => true,
+    );
+
+    $form['url'] = array(
+        '#title'         => t('RSS feed url.'),
+        '#description'   => t('Insert RSS url'),
+        '#type'          => 'textfield',
+        '#default_value' => $rss ? $rss['url'] : '',
+        '#required'      => true,
+    );
+
+    $form['submit'] = array(
+        '#type'  => 'submit',
+        '#value' => $rss ? t('Save') : t('Add'),
+    );
+
+    if ($rss) {
+        $form['id'] = array(
+            '#type'  => 'value',
+            '#value' => $rss['id'],
+        );
+    }
+
+    return $form;
+}
+
+/* Валидация */
+function rss_feeds_form_validate($form, &$form_state)
+{
+    $url = $form_state['values']['url'];
+
+    if (fopen($url, "r")) {
+        libxml_use_internal_errors(true);
+        $rss_feed = simplexml_load_file($url);
+        if (empty($rss_feed)) {
+            form_set_error('url', t('URL is invalid!'));
+        }
+    } else {
+        form_set_error('url', t('URL is invalid!'));
+    }
+}
+
+/* Подтверждение */
+function rss_feeds_form_submit($form, &$form_state)
+{
+    $rss = array(
+        'name'       => $form_state['values']['name'],
+        'url'        => $form_state['values']['url'],
+        'created_at' => time(),
+        'updated_at' => time(),
+    );
+
+    // save edit data
+    if (isset($form_state['values']['id'])) {
+        $rss['id'] = $form_state['values']['id'];
+        drupal_write_record('rssfeeds', $rss, 'id');
+        drupal_set_message(t('RSS Feed saved!'));
+    } // add new data
+    else {
+        drupal_write_record('rssfeeds', $rss);
+        drupal_set_message(t('RSS Feed added!'));
+    }
+
+    drupal_goto('admin/config/content/rss_feeds');
+}
+
+function rss_load($id)
+{
+    $rss = db_select('rssfeeds', 'n')
+        ->fields('n', array('id', 'name', 'url', 'created_at', 'updated_at'))
+        ->condition('n.id', $id)
+        ->execute()->fetchAssoc();
+
+    return $rss;
+}
+
+function rss_list()
+{
+    $header = array(
+        array('data' => t('Name')),
+        array('data' => t('URL')),
+        array('data' => t('Actions'))
+    );
+    $rss = db_select('rssfeeds', 'n')
+        ->fields('n', array('id', 'name', 'url'))
+        ->execute()->fetchAll();
+    $row = array();
+    if ($rss) {
+        foreach ($rss as $rss_feed) {
+            $actions = array(
+                l(t('edit'), 'admin/config/content/rss_feeds/' . $rss_feed->id . '/edit'),
+                l(t('delete'), 'admin/config/content/rss_feeds/' . $rss_feed->id . '/delete'),
+            );
+
+            $row [] = array(
+                array('data' => $rss_feed->name),
+                array('data' => $rss_feed->url),
+                array('data' => implode(' | ', $actions)),
+            );
+        }
+    }
+
+    return theme('table', array(
+        'header' => $header,
+        'rows'   => $row,
+    ));
+}
+
+function rss_feeds_delete($rss)
+{
+    $rss_deleted = db_delete('rssfeeds')
+        ->condition('id', $rss['id'])
+        ->execute();
+    drupal_set_message(t('RSS Feed deleted!'));
+    drupal_goto('admin/config/content/rss_feeds');
+}
+
+function rss_feeds_block_view($delta = '')
+{
+    $blocks = array();
+    switch ($delta) {
+        case 'rss_feeds':
+            $select = db_select('rssfeeds', 'tc');
+            $select->addField('tc', 'name');
+            $select->addField('tc', 'url');
+
+            $entries = $select->execute()->fetchAll();
+
+            $blocks['subject'] = t('List of URLs');
+            $blocks['content'] = theme('rssfeeds_block', array('urls' => $entries));
+    }
+
+    return $blocks;
+}
+
+function _rss_feeds_page()
+{
+    drupal_set_title(t('RSS Feeds'));
+
+    $result = rss_contents('page')->fetchAll();
+
+    if (!$result) {
+        $page_array['rss_feeds_arguments'] = array(
+            '#title'  => t('RSS Feeds page'),
+            '#markup' => t('No RSS feeds available'),
+        );
+
+        return $page_array;
+    } else {
+        $page_array = theme('rssfeeds_page', array('urls' => $result));
+
+        return $page_array;
+    }
+}
+
+function rss_content($rss)
+{
+    $url = $rss['url'];
+
+    libxml_use_internal_errors(true);
+    $rss_feed = simplexml_load_file($url);
+    if (!empty($rss_feed)) {
+        drupal_set_title($rss_feed->channel->title);
+        $page_array = theme('rssfeeds_content', array('items' => $rss_feed));
+
+        return $page_array;
+    } else {
+        $page_array['rss_feeds_arguments'] = array(
+            '#title'  => t('All posts from the last week'),
+            '#markup' => t('No posts available.'),
+        );
+
+        return $page_array;
+    }
+}
+
+function rss_feeds_theme()
+{
+    return array(
+        'rssfeeds_block'   => array(
+            'variables' => array(
+                'urls' => NULL
+            ),
+            'template'  => 'rssfeeds-block',
+        ),
+        'rssfeeds_page'    => array(
+            'variables' => array(
+                'urls' => NULL
+            ),
+            'template'  => 'rssfeeds-page',
+        ),
+        'rssfeeds_content' => array(
+            'variables' => array(
+                'items' => NULL
+            ),
+            'template'  => 'rssfeeds-content',
+        )
+    );
+}

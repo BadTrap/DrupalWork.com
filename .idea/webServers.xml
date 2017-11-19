@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="3b743f8e-9b30-442e-9168-ce20f4bcaca7" name="localhost" url="http://drupal7-test.com/">
+        <fileTransfer port="0" mountedRoot="D:\Software\wamp64\www\drupal7.com" accessType="MOUNT" />
+      </webServer>
+    </option>
+  </component>
+</project>

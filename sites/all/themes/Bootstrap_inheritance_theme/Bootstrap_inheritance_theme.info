@@ -1,0 +1,4 @@
+name = Bootstrap Inheritance Theme
+description = Inheritance theme for Bootstrap
+core = 7.x
+base theme = bootstrap

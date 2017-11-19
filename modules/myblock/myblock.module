@@ -1,0 +1,31 @@
+<?php
+/**
+
+ * @file
+ * myblock.module
+ */
+
+
+
+function myblock_block_info() {
+
+
+    $blocks['myblock'] = array(
+        'info' => t('My Block Module'),
+    );
+
+    return $blocks;
+}
+
+function myblock_block_view($delta = '') {
+
+    $block = array();
+
+    switch ($delta) {
+        case 'myblock':
+            $block['subject'] = t('This is my custom block');
+            $block['content'] = " Test Lorem Lorem Test ";
+            break;
+    }
+    return $block;
+}

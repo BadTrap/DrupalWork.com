@@ -1,0 +1,5 @@
+name = "My Block Module"
+description = "My custom module"
+core = "7.x"
+php = "5.5.38"
+version = "7.x-1.0"

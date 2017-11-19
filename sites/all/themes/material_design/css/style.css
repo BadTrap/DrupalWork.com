@@ -1,0 +1,14 @@
+/**
+ * This file will be overwritten when the Bootstrap Framework source files
+ * are compiled using the Less CSS pre-processor.
+ */
+
+
+
+.footer {
+    margin-top: 45px;
+    padding-top: 35px;
+    padding-bottom: 36px;
+    border-top: 1px solid black;
+    text-align: center;
+}
